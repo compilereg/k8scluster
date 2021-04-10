@@ -1,0 +1,219 @@
+#!/bin/bash
+################################### Shell script that collect info about the K8S cluster, and configure the playbook
+################################################## The playbook, after then can be used to setup the k8S cluster
+################################################ Written by: Eng. Ahmed M. Elsayed (compiler@aast.edu)
+### Exit codes:
+##			0: Success
+##			1: Missed packages
+##			2: Can not find inventory template file
+##			3: Can not read from inventory template file
+##			4: can not write to temp inventory file
+##			5: Can not generate the temp inventory file (j2 step)
+
+declare -A NEEDEDPACKAGES
+declare -A WORKERSNODES
+MASTERNODEHOSTNAME=""
+MASTERNODEIP=""
+SSHUSER=""
+SSHPASS=""
+BECOMEPASS=""
+MDNSIF=""
+
+function checkPackages {
+	ERR=0
+	for PACKAGE in ${!NEEDEDPACKAGES[@]}
+	do
+		CO=$(which ${PACKAGE}|wc -l)
+		if [ ${CO} -eq 0 ] 
+		then
+			echo "Missed package ${NEEDEDPACKAGES[$PACKAGE]}, please install it first"
+			ERR=1
+		else
+			echo "${NEEDEDPACKAGES[$PACKAGE]} .. DONE"
+		fi
+	done
+	if [ ${ERR} -eq 1 ]
+	then
+		echo "Please install missed package(s) and try again"
+		exit 1
+	fi
+}
+
+function readInput {
+	TYPE=${1}
+	MSG=${2}
+	CONT=1
+	while [ ${CONT} -eq 1 ]
+	do
+		read -p "${MSG} : " USERINPUT
+		case ${TYPE} in
+			"hostname")
+				## The hostname must be single word, without space,.,any special character other _ 
+				CO=$(echo ${USERINPUT} | grep  "[^a-zA-Z0-9\-_]"|wc -l)
+				if [ ${CO} -gt 0 ]
+				then
+					echo "Invalid hostname value,The hostname contains characters, numbers, _ "
+				else
+					CONT=0
+				fi
+				
+				;;
+			"string")
+				CONT=0
+				;;
+			"integer")
+				CO=$(echo ${USERINPUT} | grep "[^0-9]"|wc -l)
+				if [ ${CO} -gt 0 ]
+                                then
+                                        echo "Invalid number,it must be integer"
+                                else
+					if [ ${USERINPUT} -gt 0 ]
+					then
+                                        	CONT=0
+					else
+						echo "Must be greater than 0"
+					fi
+                                fi
+				;;
+			"ipv4")
+				CO=$(ipcalc ${USERINPUT} 2> /dev/null|grep INVALID | wc -l )
+				if [ ${CO} -gt 0 ]
+				then
+					echo "Invalid IPv4 value"
+				else
+					CONT=0
+				fi
+				;;
+		esac
+	done
+	echo ${USERINPUT}
+}
+
+
+function saveValues {
+	##Generate yaml file in /tmp
+	FILENAME=$( cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-12} | head -n 1)
+	DATAFILE="/tmp/${FILENAME}.yaml"
+	TMPINVFILE="/tmp/$( cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w ${1:-12} | head -n 1)"
+	if [ -f ${TMPINVFILE} ]
+	then
+		if [ ! -w  ${TMPINVFILE} ]
+		then
+			echo "Sorry, can not write to the file  ${TMPINVFILE}"
+			exit 4
+		fi
+	fi
+cat <<EOT >> ${DATAFILE}
+MASTERNODENAME: ${MASTERNODEHOSTNAME}
+MASTERNODEIP: ${MASTERNODEIP}
+SSHUSER: ${SSHUSER}
+SSHPASS: ${SSHPASS}
+BECOMEPASS: ${BECOMEPASS}
+MDNSIF: ${MDNSIF}
+WORKERNODES:
+EOT
+	for k in ${!WORKERSNODES[@]}
+	do
+         echo " - HOSTNAME: ${k}" >> ${DATAFILE}
+         echo "   IP: ${WORKERSNODES[$k]}" >> ${DATAFILE}
+   	done
+	echo "Generating ansible inventory file from template file templs/hosts"
+	j2 templs/hosts ${DATAFILE} > ${TMPINVFILE} 2> /dev/null
+	if [ $? -ne 0 ]
+	then
+		echo "Can not generate inventory file ${TMPINVFILE}, run the following command for further investigation"
+		echo "j2 templs/hosts ${DATAFILE} > ${TMPINVFILE}"
+		exit 5
+	fi
+
+	if [ -f ${DATAFILE} ]
+	then
+			rm ${DATAFILE}
+	fi
+	echo "The inventory file has been written to ${TMPINVFILE}"
+}
+
+echo "K8S Cluster setup parameters:"
+echo "K8S has one master node that control the operation and host ETCd, and number of workers nodes host the containers"
+echo "The hostname contains characters, numbers, _ "
+### Start by checking needed packages
+NEEDEDPACKAGES=(["ipcalc"]="ipcalc" ["ansible"]="ansible" ["sshpass"]="sshpass" ["j2"]="jinja2" ["pip3"]="python3-pip" ["openssl"]="openssl" ["ansible"]="ansible")
+checkPackages
+## Check for inventory template  file
+if [ ! -f templs/hosts ]
+then
+	echo "Sorry, can not find the inventory template file templs/hosts"
+	exit 2
+fi
+## Check can read from template file
+if [ ! -r templs/hosts ]
+then
+	echo "Sorry, can not read from inventory template file templs/hosts, check permissions"
+	exit 3
+fi
+### Start reading master node info
+MASTERNODEHOSTNAME=$(readInput "hostname" "Master node hostname")
+MASTERNODEIP=$(readInput "ipv4" "Master node IP address")
+NOOFWORKERS=$(readInput "integer" "How many workers nodes")
+for i in $(seq 1 ${NOOFWORKERS})
+do
+	CONT=1
+	CURWORKERNODES=${!WORKERSNODES[@]}
+	while [ ${CONT} -eq 1 ]
+	do
+		WORKERNODENAME=$(readInput "hostname" "Worker node ${i} hostname")
+		###check if it is the same as master node name
+		if [ ${WORKERNODENAME} == ${MASTERNODEHOSTNAME} ]
+		then
+			echo "Invalid worker name, it is the same as master node name"
+		else
+			CONT=0
+		fi
+		### Check if it is the same as any other work node name
+		if [ ${CONT} -eq 0 ]
+		then
+			CONT=1
+			CO=$(echo "${CURWORKERNODES}"|grep -w "${WORKERNODENAME}"| wc -l)
+			if [ ${CO} -gt 0 ]
+			then
+				echo "Invalid worker name, it is duplicated"
+			else
+				CONT=0
+			fi
+		fi
+
+	done
+	CONT=1
+	CURWORKERNODES=${WORKERSNODES[*]}
+	while [ ${CONT} -eq 1 ]
+	do
+		WORKERNODEIP=$(readInput "ipv4" "Worker node ${i} IP address")
+	### Check if worker up exists/ or he same as master
+	##Check if it is the same as master ip
+		if [ ${WORKERNODEIP} == ${MASTERNODEIP} ]
+		then
+			echo "Invalid IP address, it is the same as the master node ip"
+		else
+			CONT=0
+		fi
+		if [ ${CONT} -eq 0 ]
+		then
+			CONT=1
+		##Check if the ip is duplicated
+			CO=$(echo "${CURWORKERNODES}"|grep -w "${WORKERNODEIP}"| wc -l)
+                	if [ ${CO} -gt 0 ]
+                	then
+                        	echo "Invalid worker IP, it is duplicated"
+                	else
+                        	CONT=0
+                	fi
+		fi
+	done
+	WORKERSNODES[${WORKERNODENAME}]=${WORKERNODEIP}
+done
+SSHUSER=$(readInput "hostname" "Enter SSH user name")
+SSHPASS=$(readInput "string" "Enter SSH Password ")
+BECOMEPASS=$(readInput "string" "Enter become Password")
+MDNSIF=$(readInput "hostname" "Enter become Password")
+saveValues
+exit 0

@@ -1,0 +1,7 @@
+---
+# handlers file for roles/kube-dependencies
+ - name:  Start docker
+   ansible.builtin.service:
+             name: docker
+             state: restarted
+

@@ -1,0 +1,16 @@
+---
+- name: Delete unwanted sources
+  hosts: all
+  become: yes
+  tasks:
+          - name: Remove /root/node_joined.txt
+            file:
+                    path: /root/node_joined.txt
+                    state: absent
+          - name: Stop firewalld
+            service:
+                    name: firewalld
+                    state: stopped
+
+
+

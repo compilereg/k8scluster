@@ -1,0 +1,52 @@
+---
+# tasks file for roles/kube-dependencies
+   - name: install Docker
+     apt:
+       name: docker.io
+       state: present
+       update_cache: true
+     notify:
+             - Start docker
+
+
+   - name: Update docker daemon config
+     ansible.builtin.copy:
+             src: files/daemon.json
+             dest: /etc/docker/daemon.json 
+     notify:
+             - Start docker
+
+   - name: Enable docker to start automatically
+     ansible.builtin.service:
+             name: docker
+             enabled: yes
+
+   - name: install APT Transport HTTPS
+     apt:
+       name: apt-transport-https
+       state: present
+
+   - name: add Kubernetes apt-key
+     apt_key:
+       url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+       state: present
+
+   - name: add Kubernetes' APT repository
+     apt_repository:
+      repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: 'kubernetes'
+
+   - name: Update apt mirrors
+     apt:
+             update_cache: true
+
+   - name: Install kubelet 
+     apt:
+       name: kubelet
+       state: present
+
+   - name: Install kubeadm
+     apt:
+       name: kubeadm
+       state: present

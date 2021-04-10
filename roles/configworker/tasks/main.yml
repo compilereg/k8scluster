@@ -1,0 +1,19 @@
+---
+# tasks file for roles/configworker
+
+    - name: get join command
+      when: inventory_hostname in groups['clusteradmin']
+      shell: kubeadm token create --print-join-command
+      register: join_command_raw
+
+    - name: set join command
+      when: inventory_hostname in groups['clusteradmin']
+      set_fact:
+        join_command: "{{ join_command_raw.stdout_lines[0] }}"
+
+    - name: Join the K8s cluster
+      when: inventory_hostname in groups['clusternodes']
+      shell: "{{ hostvars['k8sadmin'].join_command }} >> node_joined.txt"
+      args:
+        chdir: $HOME
+        creates: node_joined.txt
