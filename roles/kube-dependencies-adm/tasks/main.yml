@@ -1,7 +1,0 @@
----
-# tasks file for roles/kube-dependencies-adm
-   - name: Install kubectl to k8s admin server
-     apt:
-       name: kubectl
-       state: present
-       force: yes
