@@ -32,7 +32,7 @@ configure-system is a shell script asks for parameters values, and generate a fi
   * cd k8scluster
   * chmod +x configure-system
   * ./configure-system
-The script will print the inventory file name, copy it in current direcoty with name hosts. For example if the inventory file was /tmp/compiler
+     The script will print the inventory file name, copy it in current direcoty with name hosts. For example if the inventory file was /tmp/compiler
   * cp /tmp/compiler hosts
   * ansible-playbook k8scluster.yml
 It may takes time depends on your internet connection and number of k8s cluster nodes
