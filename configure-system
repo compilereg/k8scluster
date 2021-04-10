@@ -117,12 +117,12 @@ EOT
          echo " - HOSTNAME: ${k}" >> ${DATAFILE}
          echo "   IP: ${WORKERSNODES[$k]}" >> ${DATAFILE}
    	done
-	echo "Generating ansible inventory file from template file templs/hosts"
-	j2 templs/hosts ${DATAFILE} > ${TMPINVFILE} 2> /dev/null
+	echo "Generating ansible inventory file from template file templs/inventoryfile"
+	j2 templs/inventoryfile ${DATAFILE} > ${TMPINVFILE} 2> /dev/null
 	if [ $? -ne 0 ]
 	then
 		echo "Can not generate inventory file ${TMPINVFILE}, run the following command for further investigation"
-		echo "j2 templs/hosts ${DATAFILE} > ${TMPINVFILE}"
+		echo "j2 templs/inventoryfile ${DATAFILE} > ${TMPINVFILE}"
 		exit 5
 	fi
 
@@ -140,15 +140,15 @@ echo "The hostname contains characters, numbers, _ "
 NEEDEDPACKAGES=(["ipcalc"]="ipcalc" ["ansible"]="ansible" ["sshpass"]="sshpass" ["j2"]="jinja2" ["pip3"]="python3-pip" ["openssl"]="openssl" ["ansible"]="ansible")
 checkPackages
 ## Check for inventory template  file
-if [ ! -f templs/hosts ]
+if [ ! -f templs/inventoryfile ]
 then
-	echo "Sorry, can not find the inventory template file templs/hosts"
+	echo "Sorry, can not find the inventory template file templs/inventoryfile"
 	exit 2
 fi
 ## Check can read from template file
-if [ ! -r templs/hosts ]
+if [ ! -r templs/inventoryfile ]
 then
-	echo "Sorry, can not read from inventory template file templs/hosts, check permissions"
+	echo "Sorry, can not read from inventory template file templs/inventoryfile, check permissions"
 	exit 3
 fi
 ### Start reading master node info
