@@ -29,7 +29,7 @@ On ansible controller:
 To setup a K8S cluster, 1st you have to set some parameters as hostnames, and IP addresses. 
 Note: the K8S node hostname must be k8sadmin, because it is hardcorded in the task "Join the K8s cluster". You welcome to change it/or make it generic.
 configure-system is a shell script asks for parameters values, and generate a file under /tmp for inventory file. 
-  * cd k8s_cluster
+  * cd k8scluster
   * chmod +x configure-system
   * ./configure-system
 The script will print the inventory file name, copy it in current direcoty with name hosts. For example if the inventory file was /tmp/compiler
