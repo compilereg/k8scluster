@@ -36,3 +36,18 @@ The script will print the inventory file name, copy it in current direcoty with 
   * cp /tmp/compiler hosts
   * ansible-playbook k8scluster.yml
 It may takes time depends on your internet connection and number of k8s cluster nodes
+
+# Automatic inventory file generation
+You can automate the configure-system script by create a text file contains all needed parameters and execute it 
+ * ./configure-sysyem < <text file name>
+The text file structure will be
+k8sadmin
+<K8s Admin IP>
+Integer represents how any workers
+<Worker node hostname>
+<Worker node IP>
+<Administrator username>
+<Administrator password>
+<sudo password>
+<NIC name used in the clusteR>
+Then, repeate the worker nodehostname, and IP for your desired number of worker nodes
