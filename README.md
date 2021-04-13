@@ -3,6 +3,7 @@ An ansible playbook to setup a full kubernetes (k8S) cluster without any perior 
 URL: https://www.digitalocean.com/community/tutorials/how-to-create-a-kubernetes-cluster-using-kubeadm-on-ubuntu-18-04
 
 # Changes from bsder's playbook:
+  * Divide the playbook into roles
   * Remove kube* version from playbook
   * Add docker handler with notification to start
   * Add task to enable docker to start at boot
