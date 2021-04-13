@@ -9,6 +9,7 @@
 ##			3: Can not read from inventory template file
 ##			4: can not write to temp inventory file
 ##			5: Can not generate the temp inventory file (j2 step)
+##			6: Can not find id_rsa.pub
 
 declare -A NEEDEDPACKAGES
 declare -A WORKERSNODES
@@ -150,6 +151,12 @@ if [ ! -r templs/inventoryfile ]
 then
 	echo "Sorry, can not read from inventory template file templs/inventoryfile, check permissions"
 	exit 3
+fi
+## Check for id_rsa.pub
+if [ ! -f ~/.ssh/id_rsa.pub ]
+then
+	echo "Sorry, can not find id_rsa.pub, please create it. See ssh-keygen for more information"
+	exit 6
 fi
 ### Start reading master node info
 MASTERNODEHOSTNAME=$(readInput "hostname" "Master node hostname")
