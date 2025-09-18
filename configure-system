@@ -43,10 +43,20 @@ function checkPackages {
 function readInput {
 	TYPE=${1}
 	MSG=${2}
+	PASS=${3}
+
 	CONT=1
 	while [ ${CONT} -eq 1 ]
 	do
-		read -p "${MSG} : " USERINPUT
+		if [ ! -z ${PASS} ]  
+		then
+			if [ ${PASS} == "password" ] 
+			then
+				read -s -p "${MSG} : " USERINPUT
+			fi
+		else
+			read -p "${MSG} : " USERINPUT
+		fi
 		case ${TYPE} in
 			"hostname")
 				## The hostname must be single word, without space,.,any special character other _ 
@@ -219,8 +229,8 @@ do
 	WORKERSNODES[${WORKERNODENAME}]=${WORKERNODEIP}
 done
 SSHUSER=$(readInput "hostname" "Enter SSH user name")
-SSHPASS=$(readInput "string" "Enter SSH Password ")
-BECOMEPASS=$(readInput "string" "Enter become Password")
+SSHPASS=$(readInput "string" "Enter SSH Password " "password" )
+BECOMEPASS=$(readInput "string" "Enter become Password" "password")
 MDNSIF=$(readInput "hostname" "Enter become Password")
 saveValues
 exit 0
